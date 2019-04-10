@@ -169,7 +169,7 @@ func watchTraffic(client *redis.Client) {
 
 		metadata, err := parseKeyName(msg.Channel)
 		if err != nil {
-			fmt.Println("Unexpected key name: %s", msg.Channel)
+			fmt.Println("Unexpected key name: ", msg.Channel)
 			continue
 		}
 		labels := prometheus.Labels{"realm": metadata.realm}
@@ -177,7 +177,7 @@ func watchTraffic(client *redis.Client) {
 		if metadata.messageType == "traffic" {
 			trafficMetric, err := parseTrafficMetric(msg.Payload)
 			if err != nil {
-				fmt.Println("Unexpected traffic payload: %s", msg.Payload)
+				fmt.Println("Unexpected traffic payload: ", msg.Payload)
 				continue
 			}
 
@@ -249,7 +249,7 @@ func main() {
 	for _, key := range keys {
 		metadata, err := parseKeyName(key)
 		if err != nil {
-			fmt.Println("Unexpected key name: %s", key)
+			fmt.Println("Unexpected key name: ", key)
 			continue
 		}
 		allocationGauge.With(prometheus.Labels{"realm": metadata.realm}).Inc()
