@@ -21,6 +21,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -127,23 +128,36 @@ type Allocation struct {
 	lastMetricTimestamp time.Time
 }
 
-func parseKeyName(key string) MessageMetadata {
+func parseKeyName(key string) (MessageMetadata, error) {
+	var metadata MessageMetadata
+
 	result := keyRegexp.FindStringSubmatch(key)
-	return MessageMetadata{
+	if result == nil {
+		return metadata, errors.New("Unexpected key name")
+	}
+
+	metadata = MessageMetadata{
 		result[2],
 		result[1],
 		result[3],
 	}
+	return metadata, nil
 }
 
-func parseTrafficMetric(data string) TrafficMetric {
+func parseTrafficMetric(data string) (TrafficMetric, error) {
+	var trafficMetric TrafficMetric
 	result := metricRegexp.FindStringSubmatch(data)
+	if result == nil {
+		return trafficMetric, errors.New("Unexpected traffic metric")
+	}
+
 	rcvp, _ := strconv.ParseFloat(result[1], 64)
 	rcvb, _ := strconv.ParseFloat(result[2], 64)
 	sentp, _ := strconv.ParseFloat(result[3], 64)
 	sentb, _ := strconv.ParseFloat(result[4], 64)
 
-	return TrafficMetric{rcvp, rcvb, sentp, sentb}
+	trafficMetric = TrafficMetric{rcvp, rcvb, sentp, sentb}
+	return trafficMetric, nil
 }
 
 func watchTraffic(client *redis.Client) {
@@ -153,11 +167,19 @@ func watchTraffic(client *redis.Client) {
 	for {
 		msg := <-channel
 
-		metadata := parseKeyName(msg.Channel)
+		metadata, err := parseKeyName(msg.Channel)
+		if err != nil {
+			fmt.Println("Unexpected key name: %s", msg.Channel)
+			continue
+		}
 		labels := prometheus.Labels{"realm": metadata.realm}
 
 		if metadata.messageType == "traffic" {
-			trafficMetric := parseTrafficMetric(msg.Payload)
+			trafficMetric, err := parseTrafficMetric(msg.Payload)
+			if err != nil {
+				fmt.Println("Unexpected traffic payload: %s", msg.Payload)
+				continue
+			}
 
 			receivedPackets.With(labels).Add(trafficMetric.rcvp)
 			receivedBytes.With(labels).Add(trafficMetric.rcvb)
@@ -225,7 +247,11 @@ func main() {
 		panic(err)
 	}
 	for _, key := range keys {
-		metadata := parseKeyName(key)
+		metadata, err := parseKeyName(key)
+		if err != nil {
+			fmt.Println("Unexpected key name: %s", key)
+			continue
+		}
 		allocationGauge.With(prometheus.Labels{"realm": metadata.realm}).Inc()
 	}
 
