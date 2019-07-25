@@ -40,7 +40,7 @@ import (
 
 var (
 	metricRegexp, _ = regexp.Compile("rcvp=([0-9]+), rcvb=([0-9]+), sentp=([0-9]+), sentb=([0-9]+)")
-	keyRegexp, _    = regexp.Compile("(turn/realm/([^/]+)/user/[^/]+/allocation/[^/]+)/(.+)")
+	keyRegexp, _    = regexp.Compile("(turn/realm/([^/]+)/user/[^/]*/allocation/[^/]+)/(.+)")
 )
 
 var (
