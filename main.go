@@ -209,12 +209,11 @@ func watchTraffic(client *redis.Client) {
 				}
 
 				allocations[metadata.allocationName] = &Allocation{&rates, time.Now()}
-			} else {
-				allocations[metadata.allocationName] = &Allocation{nil, time.Now()}
 			}
 		} else if metadata.messageType == "status" {
 			if strings.HasPrefix(msg.Payload, "new") {
 				allocationGauge.With(labels).Inc()
+				allocations[metadata.allocationName] = &Allocation{nil, time.Now()}
 			} else if msg.Payload == "deleted" {
 				allocationGauge.With(labels).Dec()
 				allocation := allocations[metadata.allocationName]
@@ -253,6 +252,7 @@ func main() {
 			continue
 		}
 		allocationGauge.With(prometheus.Labels{"realm": metadata.realm}).Inc()
+		allocations[metadata.allocationName] = &Allocation{nil, time.Now()}
 	}
 
 	// watch for pubsub traffic events
